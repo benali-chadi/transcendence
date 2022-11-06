@@ -1,0 +1,56 @@
+
+version: "3.9"  # optional since v1.27.0
+
+services:
+
+  PostgreSQL:
+    container_name: PostgreSQL
+    image: postgres:latest
+    ports: 
+      - 5432:5432
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: test_v1
+    volumes:
+      - database:/var/lib/postgresql/data
+
+
+  backend:
+    container_name: backend
+    build:
+      context: ./srcs/back-end
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    depends_on:
+      - PostgreSQL
+    volumes:
+      - static:/back-end/static
+
+
+  frontend:
+    container_name: frontend
+    build:
+      context: ./srcs/front-end
+      dockerfile: Dockerfile
+    ports:
+      - '3001:3001'
+    depends_on:
+      - backend
+    
+volumes:
+  database:
+    driver: local
+    name: t_database
+    driver_opts:
+      type: 'none'
+      o : 'bind'
+      device: '/Users/alagrini/goinfre/database/'
+  static:
+    driver: local
+    name: t_static
+    driver_opts:
+      type: 'none'
+      o : 'bind'
+      device: '/Users/alagrini/goinfre/static/'

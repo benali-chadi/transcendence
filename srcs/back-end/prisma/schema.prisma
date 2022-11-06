@@ -1,0 +1,141 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User{
+  id  Int   @id @default(autoincrement())
+  intraId   Int @unique
+  username  String @unique
+  avatar    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  hashRt    String? 
+  Socket_id String? @unique()
+  status    String @default("offline")
+  members   RoomMember[]
+  requested UserRelation[] @relation("requester")
+  addressed UserRelation[] @relation("addressed")
+  winner  Game[] @relation("winner")
+  loser   Game[] @relation("loser")
+  level   Decimal @default(0)
+  xp   Decimal @default(0)
+  TFA     TWO_FA?
+  achievements Achievements[]
+
+  @@map("users")
+}
+
+model TWO_FA {
+  id Int @id @default(autoincrement())
+  isTwoFactorAuthenticationEnabled Boolean @default(false)
+  twoFactorAuthenticationSecret_base32 String?  @unique()
+  twoFactorAuthenticationSecret_ascii String?  @unique()
+  twoFactorAuthenticationSecret_hex String?  @unique()
+  twoFactorAuthenticationSecret_otpauth_url String?  @unique()
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id Int @unique()
+}
+
+model UserRelation{
+  r_user User @relation("requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  requesterId Int
+  a_user User @relation("addressed", fields: [addressedId], references: [id], onDelete: Cascade)
+  addressedId Int
+  status RelationStatus
+  name String @unique
+  
+  @@id([requesterId, addressedId])
+}
+
+model ChatRoom{
+  id  Int @id @default(autoincrement())
+  name  String? @unique
+  type  ChatroomType
+  icon  String?
+  password String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+  disabled Boolean @default(false)
+  messages Message[]
+  members RoomMember[]
+  inbox Inbox?
+}
+
+model Message{
+  id  Int @id @default(autoincrement())
+  from  Int
+  content String
+  sentDate DateTime @default(now())
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId Int
+}
+
+model Inbox{
+  id Int @id @default(autoincrement())
+  content String
+  room ChatRoom @relation(fields: [InboxId], references: [id], onDelete: Cascade)
+  InboxId Int @unique
+}
+
+model RoomMember{
+  role RoomMemberRole @default(Member)
+  joinedAt DateTime @default(now())
+  isBanned Boolean @default(false)
+  bannedAt DateTime?
+  banDuration Int?
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId Int
+  member User @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId Int
+  @@id([roomId, memberId])
+}
+
+model Achievements{
+  id Int @id @default(autoincrement())
+  title String
+  desc String
+  achiever User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id Int
+}
+
+model  Game {
+  id Int @id @default(autoincrement())
+  winnerId Int
+  loserId Int
+  winnerScore Int
+  loserScore Int
+  winner User @relation( "winner",fields: [winnerId], references: [id], onDelete: Cascade)
+  loser User @relation("loser",fields: [loserId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+enum ChatroomType {
+  Public
+  Protected
+  Private
+  DirectMessage
+}
+
+enum RoomMemberRole {
+  Member
+  Admin
+  Owner
+}
+
+enum RelationStatus {
+  Requested
+  Accepted
+  Declined
+  Blocked
+}
+
